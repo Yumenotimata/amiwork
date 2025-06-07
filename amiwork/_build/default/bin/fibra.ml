@@ -45,6 +45,7 @@ module Fibra : Fibra = struct
     a
 
   (* open Printf *)
+  (* open Unix *)
 
 let run main =
   let rec run_fibra : 'a. 'a promise -> (unit -> 'a) -> unit =
@@ -52,44 +53,35 @@ let run main =
       try 
         let v = f () in
         match !pr with
-          | Done _ -> failwith ""
+          | Done _ -> failwith "already done"
           | Waiting ks ->
               pr := Done v;
-              let schedule w = 
-                enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> continue w v))
-              in
-              List.iter schedule ks;
+              List.iter (fun k -> enqueue (fun () -> ignore (continue k v))) ks;
       with
         | effect (Async f), k ->
             let p = ref (Waiting []) in
-            let f' () = run_fibra p f in
-            enqueue f';
-            enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> continue k p))
+            enqueue (fun () -> run_fibra p f);
+            enqueue (fun () -> ignore (continue k p))
         | effect (Await p), k ->
-          begin match !p with
-            | Done v -> run_fibra (ref (Waiting [])) (fun () -> continue k v)
-            | Waiting l ->
-              p := Waiting (k::l);
-              match dequeue () with
-                | Some f -> f ()
-                | None -> ()
-          end
+            match !p with
+              | Done v -> 
+                (* enqueue (fun () -> ignore (continue k v)) *)
+                continue k v
+              | Waiting l -> p := Waiting (k::l)
         | effect (Wake f), k ->
-          let waker () =
-            enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> continue k ()))
-          in
-          f waker;
-          match dequeue () with
-            | Some f -> f ()
-            | None -> ()
+            let waker () =
+              enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> ignore (continue k ())))
+            in
+            f waker;
+            ()
 
   in
-  enqueue (fun () -> run_fibra (ref (Waiting [])) main);
   let rec scheduler () =
     match dequeue () with
       | Some f -> f (); scheduler ()
       | None -> scheduler ()
   in
+  enqueue (fun () -> run_fibra (ref (Waiting [])) main);
   scheduler ()
 
 end
