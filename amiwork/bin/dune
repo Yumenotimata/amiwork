@@ -1,0 +1,4 @@
+(executable
+ (public_name amiwork)
+ (name main)
+ (libraries amiwork))

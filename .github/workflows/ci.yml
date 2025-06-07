@@ -1,0 +1,22 @@
+name: ocaml / main
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          submodules: true
+
+      - name: Build ocaml-ci docker image
+        run: docker build -t ocaml-ci -f .github/Dockerfile .
+
+      - name: Run exercism/ocaml ci (runs tests) for all exercises
+        run: docker run -w /repo -v $(pwd):/repo ocaml-ci .github/.gha-ci.sh
