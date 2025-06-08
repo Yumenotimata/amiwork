@@ -56,27 +56,28 @@ let run main =
           | Done _ -> failwith "already done"
           | Waiting ks ->
               pr := Done v;
-              List.iter (fun k -> enqueue (fun () -> ignore (continue k v))) ks;
+              let schedule k = enqueue (fun () -> continue k v) in
+              List.iter schedule ks;
       with
         | effect (Async f), k ->
             let p = ref (Waiting []) in
             enqueue (fun () -> run_fibra p f);
-            enqueue (fun () -> ignore (continue k p))
+            enqueue (fun () -> continue k p)
         | effect (Await p), k ->
             begin match !p with
-              | Done v -> enqueue (fun () -> ignore (continue k v))
+              | Done v -> enqueue (fun () -> continue k v)
               | Waiting l -> p := Waiting (k::l)
             end
         | effect (Wake f), k ->
             let waker () =
-              enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> ignore (continue k ())))
+              enqueue (fun () -> continue k ())
             in
             f waker
         | effect (WakeVal f), k ->
             let called = ref false in
             let waker v =
               if not !called then
-                enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> ignore (continue k v)));
+                enqueue (fun () -> continue k v);
                 called := true
             in
             f waker
@@ -89,5 +90,4 @@ let run main =
   in
   enqueue (fun () -> run_fibra (ref (Waiting [])) main);
   scheduler ()
-
 end
