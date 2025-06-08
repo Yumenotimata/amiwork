@@ -2,8 +2,9 @@ module type Fibra = sig
   type 'a promise
   val async : (unit -> 'a) -> 'a promise
   val await : 'a promise -> 'a
-  val run : (unit -> 'a) -> unit
   val wake_by : ((unit -> unit) -> unit) -> unit
+  val wake_by_val : (('a -> unit) -> unit) -> 'a
+  val run : (unit -> 'a) -> unit
 end
 
 module Fibra : Fibra = struct
@@ -20,10 +21,12 @@ module Fibra : Fibra = struct
     | Async : (unit -> 'a) -> 'a promise Effect.t
     | Await : 'a promise -> 'a Effect.t
     | Wake : ((unit -> unit) -> unit) -> unit Effect.t
+    | WakeVal : (('a -> unit) -> unit) -> 'a Effect.t
 
   let async f = perform (Async f)
   let await p = perform (Await p)
   let wake_by f = perform (Wake f)
+  let wake_by_val f = perform (WakeVal f)
 
   let q = Queue.create ()
   let m = Mutex.create ()
@@ -44,9 +47,6 @@ module Fibra : Fibra = struct
     Mutex.unlock m;
     a
 
-  (* open Printf *)
-  (* open Unix *)
-
 let run main =
   let rec run_fibra : 'a. 'a promise -> (unit -> 'a) -> unit =
     fun pr f ->
@@ -63,15 +63,23 @@ let run main =
             enqueue (fun () -> run_fibra p f);
             enqueue (fun () -> ignore (continue k p))
         | effect (Await p), k ->
-            match !p with
+            begin match !p with
               | Done v -> enqueue (fun () -> ignore (continue k v))
               | Waiting l -> p := Waiting (k::l)
+            end
         | effect (Wake f), k ->
             let waker () =
               enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> ignore (continue k ())))
             in
-            f waker;
-            ()
+            f waker
+        | effect (WakeVal f), k ->
+            let called = ref false in
+            let waker v =
+              if not !called then
+                enqueue (fun () -> run_fibra (ref (Waiting [])) (fun () -> ignore (continue k v)));
+                called := true
+            in
+            f waker
 
   in
   let rec scheduler () =

@@ -1,22 +1,18 @@
 open Fibra
 (* open Unix *)
 
-let sleep_async _ =
-  Fibra.wake_by (fun wake ->
-    (* ignore (Thread.create (fun () ->
-      Printf.printf "hello\n%!";
+let sleep_and_get_value sec =
+  let a = Fibra.wake_by_val (fun wake ->
+    ignore (Thread.create (fun () ->
       Unix.sleepf sec;
-      wake ()
-    ) ()) *)
-    Printf.printf "hello\n%!";
-    wake ()
-  )
-
+      wake 42
+    ) ())
+  ) in a + 1
 let main () =
   let task name () =
     Printf.printf "start %s\n%!" name;
-    let () = sleep_async 1.0 in
-    Printf.printf "end %s\n%!" name
+    let a = sleep_and_get_value 2.0 in
+    Printf.printf "end %d\n%!" a
   in
 
   let a = Fibra.async (task "A") in
