@@ -1,8 +1,0 @@
-lib: [
-  "_build/install/default/lib/amiwork/META"
-  "_build/install/default/lib/amiwork/dune-package"
-  "_build/install/default/lib/amiwork/opam"
-]
-bin: [
-  "_build/install/default/bin/amiwork"
-]

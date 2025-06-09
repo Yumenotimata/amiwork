@@ -1,2 +1,3 @@
 (library
- (name amiwork))
+ (name amiwork)
+ (flags (:standard -w -27)))

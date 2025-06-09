@@ -1,4 +1,6 @@
 (executable
  (public_name amiwork)
  (name main)
- (libraries unix threads))
+ (libraries unix threads)
+ (preprocess (pps ppx_deriving.show ppx_deriving.ord))
+ (flags (:standard -warn-error -a)))
