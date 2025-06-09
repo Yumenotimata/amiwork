@@ -3,17 +3,68 @@
 module type Meta = sig
   type uid
   type route
+  type device [@@deriving show]
   val issue : unit -> uid
+  val connect : uid -> uid -> unit
+  val run : (unit -> unit) -> unit
 end
 
 (*MEMO: なぜか抽象型だとrouteのフィールドにアクセスできない*)
 module Meta = struct
+  open Effect
+  open Effect.Deep
+
   type uid = int [@@deriving show]
   type route = {
     p1 : uid;
     p2 : uid;
   }
-  let issue () = 0
+  type device = {
+    uid : uid;
+    rx : bytes list;
+  } [@@deriving show]
+  
+  type _ Effect.t +=
+    | Create : uid Effect.t
+    | Connect : uid * uid -> unit Effect.t
+    | Send : uid * bytes list -> unit Effect.t
+
+  let counter = ref 0
+  let issue () = 
+    let uid = !counter in
+    counter := !counter + 1;
+    uid
+
+  let connect p1 p2 = perform (Connect (p1, p2))
+  let run f =
+    let devices : device list ref = ref [] in
+    let rtb : route list ref = ref [] in 
+    try f (); !devices with
+      | effect Connect (p1 , p2), k -> 
+        rtb := !rtb @ [{ p1; p2 }];
+        continue k ()
+      | effect Create, k -> 
+          let uid = issue () in
+          devices := !devices @ [{ uid; rx = [] }];
+          continue k uid
+      | effect Send (src, payload), k -> 
+          let targets =
+            List.filter_map (fun (rt : route) -> 
+              if rt.p1 == src then 
+                Some rt.p2
+              else if rt.p2 == src then 
+                Some rt.p1 
+              else
+                None
+            ) !rtb
+          in 
+          devices := List.map (fun dev -> 
+            if List.exists (fun p -> p == dev.uid) targets then 
+              { dev with rx = dev.rx @ payload} 
+            else 
+              dev
+          ) !devices;
+          continue k ()
 end
 
 module type Nic = sig
@@ -24,20 +75,15 @@ end
 
 module type Phy = sig
   module Nic : Nic
-  type device [@@deriving show]
-  val run :  Meta.route list -> (unit -> unit) -> (device list)
+  val run :  Meta.route list -> (unit -> unit) -> (Meta.device list)
 end
 
-module Phy : Phy = struct
+module Phy = struct
   open Effect
   open Effect.Deep
   open Meta
-  
-  type _ Effect.t +=
-    | Create : Meta.uid Effect.t
-    | Send : Meta.uid * bytes list -> unit Effect.t
 
-  module Nic : Nic = struct
+  module Nic = struct
     type nic = {
       uid : Meta.uid;
     }
@@ -45,36 +91,9 @@ module Phy : Phy = struct
     let send self payload = perform (Send (self.uid, payload))
   end
 
-  type device = {
-    uid : Meta.uid;
-    rx : bytes list;
-  } [@@deriving show]
-
   let run rtb f = 
     let devices : device list ref = ref [] in
-    try f (); !devices with
-      | effect Create, k -> 
-          let uid = Meta.issue () in
-          devices := !devices @ [{ uid; rx = [] }];
-          continue k uid
-      | effect Send (src, payload), k -> 
-          let targets =
-            List.filter_map (fun (rt : Meta.route) -> 
-              if rt.p1 == src then 
-                Some rt.p1
-              else if rt.p2 == src then 
-                Some rt.p2 
-              else
-                None
-            ) rtb
-          in 
-          devices := List.map (fun dev -> 
-            if List.exists (fun p -> p == dev.uid) targets then 
-              { dev with rx = dev.rx @ payload} 
-            else 
-              dev
-          ) !devices;
-          continue k ()
+    f ()  
 end
 
 module type Ethernet = sig
@@ -138,9 +157,14 @@ module Network : Network = struct
 end
 
 let main () = 
-  let nic = Phy.Nic.create () in
-  Phy.Nic.send nic []
+  let nic0 = Phy.Nic.create () in
+  let nic1 = Phy.Nic.create () in
+  
+  let nic2 = Phy.Nic.create () in
+  Meta.connect nic0.uid nic1.uid;
+  Meta.connect nic0.uid nic2.uid;
+  Phy.Nic.send nic0 [Bytes.make 10 'a']
 
 let _ = 
-  let devices = Phy.run [] main in
-  List.iter (fun (dev : Phy.device) -> Printf.printf "%s\n%!" (Phy.show_device dev)) devices;
+  let devices = Meta.run (fun () -> Phy.run [] main) in
+  List.iter (fun (dev : Meta.device) -> Printf.printf "%s\n%!" (Meta.show_device dev)) devices;
