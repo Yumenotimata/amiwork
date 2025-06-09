@@ -181,29 +181,19 @@ module Network : Network = struct
       | e -> raise e
 end
 
+open Effect
+open Effect.Deep
+
+type _ Effect.t +=
+  | Test : unit -> string Effect.t
+
 let main () = 
-  let nic0 = Phy.Nic.create () in
-  let nic1 = Phy.Nic.create () in
-  let nic2 = Phy.Nic.create () in
-  Meta.connect nic0.uid nic1.uid;
-  Meta.connect nic0.uid nic2.uid;
-  let p1 = Fibra.async (fun () -> (
-    (* Printf.printf "recv\n%!";
-    let res = Phy.Nic.recv nic1 in
-    Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res)); *)
-  )) in
-  let p2 = Fibra.async (fun () -> (
-    Printf.printf "send\n%!";
-    Phy.Nic.send nic0 [Bytes.make 10 'a'];
-  )) in
-  Fibra.await p1;
-  Fibra.await p2
+    let a = Fibra.async ( fun () -> 
+      try 
+        let b = perform (Test ()) in
+        Printf.printf "%s%!" b
+      with
+        | effect Test _, k -> continue k "end"
+    ) in Fibra.await a
 
-
-  (* Printf.printf "koko%!\n";
-  let res = Phy.Nic.recv nic1 in
-  Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res)) *)
-
-let _ = 
-  let devices = Fibra.run (fun () -> let a = Meta.run (fun () -> Phy.run main) in Fibra.exit a) in
-  List.iter (fun (dev : Meta.device) -> Printf.printf "%s\n%!" (Meta.show_device dev)) devices;
+let _ = Fibra.run main
