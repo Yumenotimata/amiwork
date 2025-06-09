@@ -13,8 +13,8 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_21daff_output
-$ (cd _build/.sandbox/e2560b400c6b5d74198452751ed46e15/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/main.pp.ml --impl bin/main.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
+$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_91c5f0_output
+$ (cd _build/.sandbox/1b7e6abe92834b323b75e8975339d573/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/main.pp.ml --impl bin/main.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamldep.opt -modules -impl bin/main.pp.ml) > _build/default/bin/.main.eobjs/dune__exe__Main.impl.d
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -intf-suffix .ml -no-alias-deps -opaque -open Dune__exe -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.pp.ml)
 > File "bin/main.ml", line 5, characters 2-12:
@@ -32,144 +32,139 @@ $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@3
 >       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value connect.
 >
-> File "bin/main.ml", line 9, characters 2-55:
-> 9 |   val run : (((unit -> 'a) ref) -> unit) -> device list
->       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> File "bin/main.ml", line 9, characters 2-47:
+> 9 |   val run : (((unit -> 'a) ref) -> device list) 
+>       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value run.
 >
-> File "bin/main.ml", line 39, characters 6-13:
-> 39 |   let connect p1 p2 = perform (Connect (p1, p2))
->            ^^^^^^^
-> Warning 32 [unused-value-declaration]: unused value connect.
->
-> File "bin/main.ml", line 92, characters 8-9:
-> 92 |     let a = handler (f handler) in
+> File "bin/main.ml", line 93, characters 8-9:
+> 93 |     let a = handler (fun () -> (f handler)) in
 >              ^
 > Warning 26 [unused-var]: unused variable a.
 >
-> File "bin/main.ml", line 98, characters 2-26:
-> 98 |   val create : unit -> nic
+> File "bin/main.ml", line 99, characters 2-26:
+> 99 |   val create : unit -> nic
 >        ^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value create.
 >
-> File "bin/main.ml", line 99, characters 2-38:
-> 99 |   val send : nic -> bytes list -> unit
->        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> File "bin/main.ml", line 100, characters 2-38:
+> 100 |   val send : nic -> bytes list -> unit
+>         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value send.
 >
-> File "bin/main.ml", line 100, characters 2-30:
-> 100 |   val recv : nic -> bytes list
+> File "bin/main.ml", line 101, characters 2-30:
+> 101 |   val recv : nic -> bytes list
 >         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value recv.
 >
-> File "bin/main.ml", line 105, characters 2-34:
-> 105 |   val run : (unit -> unit) -> unit
+> File "bin/main.ml", line 106, characters 2-34:
+> 106 |   val run : (unit -> unit) -> unit
 >         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value run.
 >
-> File "bin/main.ml", line 110, characters 2-18:
-> 110 |   open Effect.Deep
+> File "bin/main.ml", line 111, characters 2-18:
+> 111 |   open Effect.Deep
 >         ^^^^^^^^^^^^^^^^
 > Warning 33 [unused-open]: unused open Stdlib.Effect.Deep.
 >
-> File "bin/main.ml", line 122, characters 6-9:
-> 122 |   let run f =
+> File "bin/main.ml", line 123, characters 6-9:
+> 123 |   let run f =
 >             ^^^
 > Warning 32 [unused-value-declaration]: unused value run.
 >
-> File "bin/main.ml", line 150, characters 2-13:
-> 150 |   type header
+> File "bin/main.ml", line 151, characters 2-13:
+> 151 |   type header
 >         ^^^^^^^^^^^
 > Warning 34 [unused-type-declaration]: unused type header.
 >
-> File "bin/main.ml", line 152, characters 2-25:
-> 152 |   val create : unit -> ip
+> File "bin/main.ml", line 153, characters 2-25:
+> 153 |   val create : unit -> ip
 >         ^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value create.
 >
-> File "bin/main.ml", line 153, characters 2-45:
-> 153 |   val send : ip -> bytes list -> addr -> unit
+> File "bin/main.ml", line 154, characters 2-45:
+> 154 |   val send : ip -> bytes list -> addr -> unit
 >         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value send.
 >
-> File "bin/main.ml", line 158, characters 2-34:
-> 158 |   val run : (unit -> unit) -> unit
+> File "bin/main.ml", line 159, characters 2-34:
+> 159 |   val run : (unit -> unit) -> unit
 >         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 32 [unused-value-declaration]: unused value run.
 >
-> File "bin/main.ml", line 162, characters 2-13:
-> 162 |   open Effect
+> File "bin/main.ml", line 163, characters 2-13:
+> 163 |   open Effect
 >         ^^^^^^^^^^^
 > Warning 33 [unused-open]: unused open Stdlib.Effect.
 >
-> File "bin/main.ml", line 163, characters 2-18:
-> 163 |   open Effect.Deep
+> File "bin/main.ml", line 164, characters 2-18:
+> 164 |   open Effect.Deep
 >         ^^^^^^^^^^^^^^^^
 > Warning 33 [unused-open]: unused open Stdlib.Effect.Deep.
 >
-> File "bin/main.ml", line 166, characters 4-51:
-> 166 |     | Send : (bytes list) * string -> unit Effect.t
+> File "bin/main.ml", line 167, characters 4-51:
+> 167 |     | Send : (bytes list) * string -> unit Effect.t
 >           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 > Warning 38 [unused-extension]: extension constructor Send is never used to build values.
 > (However, this constructor appears in patterns.)
 >
-> File "bin/main.ml", line 171, characters 6-17:
-> 171 |       src : addr;
+> File "bin/main.ml", line 172, characters 6-17:
+> 172 |       src : addr;
 >             ^^^^^^^^^^^
 > Warning 69 [unused-field]: unused record field src.
 >
-> File "bin/main.ml", line 172, characters 6-17:
-> 172 |       dst : addr;
+> File "bin/main.ml", line 173, characters 6-17:
+> 173 |       dst : addr;
 >             ^^^^^^^^^^^
 > Warning 69 [unused-field]: unused record field dst.
 >
-> File "bin/main.ml", line 173, characters 6-27:
-> 173 |       payload : bytes list;
+> File "bin/main.ml", line 174, characters 6-27:
+> 174 |       payload : bytes list;
 >             ^^^^^^^^^^^^^^^^^^^^^
 > Warning 69 [unused-field]: unused record field payload.
 >
-> File "bin/main.ml", line 179, characters 26-29:
-> 179 |     let send self payload dst = Datalink.Ethernet.send self.eth payload
+> File "bin/main.ml", line 180, characters 26-29:
+> 180 |     let send self payload dst = Datalink.Ethernet.send self.eth payload
 >                                 ^^^
 > Warning 27 [unused-var-strict]: unused variable dst.
 >
-> File "bin/main.ml", line 180, characters 8-12:
-> 180 |     let recv self = Datalink.Ethernet.recv self.eth
+> File "bin/main.ml", line 181, characters 8-12:
+> 181 |     let recv self = Datalink.Ethernet.recv self.eth
 >               ^^^^
 > Warning 32 [unused-value-declaration]: unused value recv.
 >
-> File "bin/main.ml", line 185, characters 21-28:
-> 185 |       | effect Send (payload, dst), k -> ()
+> File "bin/main.ml", line 186, characters 21-28:
+> 186 |       | effect Send (payload, dst), k -> ()
 >                            ^^^^^^^
 > Warning 27 [unused-var-strict]: unused variable payload.
 >
-> File "bin/main.ml", line 185, characters 30-33:
-> 185 |       | effect Send (payload, dst), k -> ()
+> File "bin/main.ml", line 186, characters 30-33:
+> 186 |       | effect Send (payload, dst), k -> ()
 >                                     ^^^
 > Warning 27 [unused-var-strict]: unused variable dst.
 >
-> File "bin/main.ml", line 185, characters 36-37:
-> 185 |       | effect Send (payload, dst), k -> ()
+> File "bin/main.ml", line 186, characters 36-37:
+> 186 |       | effect Send (payload, dst), k -> ()
 >                                           ^
 > Warning 27 [unused-var-strict]: unused variable k.
 >
-> File "bin/main.ml", line 198, characters 6-8:
-> 198 |   let p1 = Fibra.async (fun () -> (
+> File "bin/main.ml", line 199, characters 6-8:
+> 199 |   let p1 = Fibra.async (fun () -> (
 >             ^^
 > Warning 26 [unused-var]: unused variable p1.
 >
-> File "bin/main.ml", line 207, characters 6-8:
-> 207 |   let p2 = Fibra.async (fun () -> (
+> File "bin/main.ml", line 203, characters 8-12:
+> 203 |     let nic2 = Phy.Nic.create () in
+>               ^^^^
+> Warning 26 [unused-var]: unused variable nic2.
+>
+> File "bin/main.ml", line 206, characters 6-8:
+> 206 |   let p2 = Fibra.async (fun () -> (
 >             ^^
 > Warning 26 [unused-var]: unused variable p2.
 >
-> File "bin/main.ml", line 209, characters 8-9:
-> 209 |     let a = handler @@ fun () -> (
+> File "bin/main.ml", line 208, characters 8-9:
+> 208 |     let a = handler @@ fun () -> (
 >               ^
 > Warning 26 [unused-var]: unused variable a.
->
-> File "bin/main.ml", line 211, characters 12-16:
-> 211 |         let nic1 = Phy.Nic.create () in
->                   ^^^^
-> Warning 26 [unused-var]: unused variable nic1.
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -o bin/main.exe /home/opam/.opam/5.3.0/lib/ocaml/unix/unix.cmxa /home/opam/.opam/5.3.0/lib/ocaml/threads/threads.cmxa /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime/ppx_deriving_runtime.cmxa bin/.main.eobjs/native/dune__exe.cmx bin/.main.eobjs/native/dune__exe__Fibra.cmx bin/.main.eobjs/native/dune__exe__Main.cmx)

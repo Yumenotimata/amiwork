@@ -67,7 +67,6 @@ module Fibra : Fibra = struct
                 let p = ref (Waiting []) in
                 enqueue (fun () -> run_fibra p f);
                 enqueue (fun () -> continue k p)
-                
             | effect (Await p), k ->
                 begin match !p with
                   | Done v -> enqueue (fun () -> continue k v)
@@ -86,9 +85,6 @@ module Fibra : Fibra = struct
                     called := true
                 in
                 f waker
-            | effect eff, k ->
-                Printf.printf "unknown handler\n%!";
-                enqueue (fun () -> continue k (perform eff))
 
       in
       let rec scheduler () =

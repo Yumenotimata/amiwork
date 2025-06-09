@@ -6,10 +6,11 @@ module type Meta = sig
   type device [@@deriving show]
   val issue : unit -> uid
   val connect : uid -> uid -> unit
-  val run : (((unit -> 'a) ref) -> unit) -> device list
+  val run : (((unit -> 'a) ref) -> device list) 
 end
 
 (*MEMO: なぜか抽象型だとrouteのフィールドにアクセスできない*)
+(* もしかしなくてもMetaとFibraを統合すべき? *)
 module Meta = struct
   open Effect
   open Effect.Deep
@@ -42,7 +43,7 @@ module Meta = struct
     let q = ref [] in
     let rtb : route list ref = ref [] in 
     (* try f (); !devices with *)
-    let handler f = ref (try f (); with 
+    let handler m = ref (try m (); with 
       | effect Connect (p1 , p2), k -> 
         if p1 != p2 then
           rtb := !rtb @ [{ p1; p2 }];
@@ -89,7 +90,7 @@ module Meta = struct
                 continue k (Fibra.async (fun () -> bytes))
           end
     ) in 
-    let a = handler (f handler) in
+    let a = handler (fun () -> (f handler)) in
     !devices
 end
 
@@ -187,33 +188,33 @@ module Network : Network = struct
 end
 
 let main () = 
-  Meta.run @@ fun handler ->
-  (* Phy.run @@ fun () -> *)
-  (* let nic0 = Phy.Nic.create () in
-  let nic1 = Phy.Nic.create () in
-  let nic2 = Phy.Nic.create () in
-  Phy.Nic.send nic0 [Bytes.make 10 'a']; *)
-  (* Meta.connect nic0.uid nic1.uid;
-  Meta.connect nic0.uid nic2.uid; *)
+  let p = Fibra.async @@ fun () ->
+  Meta.run @@ fun handler -> 
+    let nic0 = Phy.Nic.create () in
+    let nic1 = Phy.Nic.create () in
+    let nic2 = Phy.Nic.create () in
+    Phy.Nic.send nic0 [Bytes.make 10 'a'];
+    Meta.connect nic0.uid nic1.uid;
+    Meta.connect nic0.uid nic2.uid;
   let p1 = Fibra.async (fun () -> (
-    (* let nic3 = Phy.Nic.create ()in
-    Meta.connect nic3.uid nic2.uid; *)
-    (* Meta.connect nic0.uid nic1.uid; *)
-    (* Printf.printf "recv\n%!";
+    handler @@ fun () ->
+    Printf.printf "recv\n%!";
     let res = Phy.Nic.recv nic1 in
-    (* let nic2 = Phy.Nic.create (/ *)
-    Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res)); *)
+    let nic2 = Phy.Nic.create () in
+    Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res))
   )) in
   let p2 = Fibra.async (fun () -> (
     Printf.printf "handle\n%!";
     let a = handler @@ fun () -> (
       Printf.printf "send\n%!";
-        let nic1 = Phy.Nic.create () in
-        []
+        (* let nic1 = Phy.Nic.create () in *)
+      Phy.Nic.send nic0 [Bytes.make 10 'a'];
+        (* [] *)
     ) in []
-    (* Phy.Nic.send nic0 [Bytes.make 10 'a']; *)
   )) in fun () -> []
-
+  in
+  Fibra.await p
+  
 
   (* Printf.printf "koko%!\n";
   let res = Phy.Nic.recv nic1 in
