@@ -50,6 +50,8 @@ module Fibra : Fibra = struct
     Mutex.unlock m;
     a
 
+  let n_wakers = ref 0
+
   let run main =
     try 
       let rec run_fibra : 'a. 'a promise -> (unit -> 'a) -> unit =
@@ -73,24 +75,37 @@ module Fibra : Fibra = struct
                   | Waiting l -> p := Waiting (k::l)
                 end
             | effect (Wake f), k ->
+                n_wakers := !n_wakers + 1;
+                let called = ref false in
                 let waker () =
-                  enqueue (fun () -> continue k ())
+                  if not !called then
+                    enqueue @@ fun () ->
+                      n_wakers := !n_wakers - 1;
+                      continue k ()
                 in
                 f waker
             | effect (WakeVal f), k ->
+                n_wakers := !n_wakers + 1;
                 let called = ref false in
                 let waker v =
                   if not !called then
-                    enqueue (fun () -> continue k v);
+                    enqueue @@ fun () -> 
+                      n_wakers := !n_wakers - 1;
+                      continue k v;
                     called := true
                 in
                 f waker
 
       in
+      let latest : 'a option ref = ref None in
       let rec scheduler () =
         match dequeue () with
-          | Some f -> f (); scheduler ()
-          | None -> scheduler ()
+          | Some f -> latest := Some (f ()); scheduler ()
+          | None -> if !n_wakers > 0 then 
+              scheduler () 
+          else match !latest with 
+            | Some v -> Obj.magic v 
+            | None -> failwith ""
       in
       enqueue (fun () -> run_fibra (ref (Waiting [])) main);
       scheduler ()

@@ -42,14 +42,12 @@ module Meta = struct
     let devices : device list ref = ref [] in
     let q = ref [] in
     let rtb : route list ref = ref [] in 
-    (* try f (); !devices with *)
     let handler m = ref (try m (); with 
       | effect Connect (p1 , p2), k -> 
         if p1 != p2 then
           rtb := !rtb @ [{ p1; p2 }];
         continue k ()
       | effect Create, k ->
-          Printf.printf "handle create \n%!";
           let uid = issue () in
           devices := !devices @ [{ uid; rx = [] }];
           continue k uid
@@ -73,7 +71,6 @@ module Meta = struct
           List.iter (fun (uid, waker) -> (
               List.iter (fun target -> (
                 if uid == target then
-                  Printf.printf "waker\n%!";
                   waker payload
               )) targets
           )) !q;
@@ -135,8 +132,8 @@ module type Datalink = sig
   module Ethernet : Ethernet
 end
 
-module Datalink : Datalink = struct
-  module Ethernet : Ethernet = struct
+module Datalink = struct
+  module Ethernet = struct
     type ethernet = {
       nic : Phy.Nic.nic;
     }
@@ -187,39 +184,21 @@ module Network : Network = struct
       | e -> raise e
 end
 
-let main () = 
-  let p = Fibra.async @@ fun () ->
-  Meta.run @@ fun handler -> 
-    let nic0 = Phy.Nic.create () in
-    let nic1 = Phy.Nic.create () in
-    let nic2 = Phy.Nic.create () in
-    Phy.Nic.send nic0 [Bytes.make 10 'a'];
-    Meta.connect nic0.uid nic1.uid;
-    Meta.connect nic0.uid nic2.uid;
-  let p1 = Fibra.async (fun () -> (
+let main () = Fibra.await @@ Fibra.async @@ fun () -> Meta.run @@ fun handler -> 
+  let eth0 = Datalink.Ethernet.create () in
+  let eth1 = Datalink.Ethernet.create () in
+  Meta.connect eth0.nic.uid eth1.nic.uid;
+  let _ = Fibra.async @@ fun () ->
     handler @@ fun () ->
-    Printf.printf "recv\n%!";
-    let res = Phy.Nic.recv nic1 in
-    let nic2 = Phy.Nic.create () in
-    Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res))
-  )) in
-  let p2 = Fibra.async (fun () -> (
-    Printf.printf "handle\n%!";
-    let a = handler @@ fun () -> (
-      Printf.printf "send\n%!";
-        (* let nic1 = Phy.Nic.create () in *)
-      Phy.Nic.send nic0 [Bytes.make 10 'a'];
-        (* [] *)
-    ) in []
-  )) in fun () -> []
+      let rx = Datalink.Ethernet.recv eth0 in
+      Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty rx));
+      (* Fibra.exit [] *)
   in
-  Fibra.await p
-  
-
-  (* Printf.printf "koko%!\n";
-  let res = Phy.Nic.recv nic1 in
-  Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty res)) *)
-
+  let _ = Fibra.async @@ fun () ->
+    handler @@ fun () -> 
+      Datalink.Ethernet.send eth1 [Bytes.make 5 'h'];
+      (* [] *)
+  in ()
 let _ = 
   let devices = Fibra.run main in
   List.iter (fun (dev : Meta.device) -> Printf.printf "%s\n%!" (Meta.show_device dev)) devices;
