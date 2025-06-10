@@ -8,36 +8,41 @@ module Fibra = struct
 
   type _ Effect.t +=
     | Run : (unit -> unit) -> int Effect.t
-    | Test : unit -> unit Effect.t
+    | Spawn : (unit -> unit) -> unit Effect.t
+    | Runner : (unit -> unit) -> unit Effect.t
 
-  let run : ((unit -> unit) -> unit) -> (unit -> unit) -> unit = fun h f ->
-    let kqueue = ref [] in
-    let higher () = () in
-    let lower f =
-      Printf.printf "lower run f \n%!";
-      let a = perform (Run f) in
-      Printf.printf "back\n%!";
-      List.iter (fun f -> f ()) !kqueue;
-      ()
-    in
+  let kqueue = ref []
+  
+  let runner f =
+    (* perform @@ Runner f; *)
+    kqueue := !kqueue @ [fun () -> f ()];
+    match !kqueue with
+      | [] -> failwith ""
+      | tasks -> 
+          kqueue := List.drop 1 !kqueue;
+          let task = List.hd tasks in
+          let _ = task () in
+          Printf.printf "first task%!\n";
+    Printf.printf "backed%!\n%!";
+    match !kqueue with
+      | [] -> failwith ""
+      | tasks -> 
+          let task = List.hd tasks in
+          let _ = task () in
+          Printf.printf "second task%!\n";
+    Printf.printf "backed%!\n%!";
+    ()
 
-    let handle_higher f k = 
-      try h (f); () with        
-        | effect Test _, k' ->
-            kqueue := !kqueue @ [fun () -> continue k' ()];
-            Printf.printf "test handled\n%!";
-            continue k 3
-        | effect eff, k' ->
-            Printf.printf "handle higher\n%!";
-            (* continue k (Obj.magic @@ perform eff) *)
 
-    in
-
-    try lower f; () with
-      | effect Run f, k ->
-          Printf.printf "cathed Run\n%!";
-          handle_higher f k;
-  ()
+  let run f = 
+    try
+      f ();
+    with
+      | effect Spawn f, k ->
+          Printf.printf "spawn\n%!";
+          kqueue := !kqueue @ [fun () -> f ()];
+          continue k ()
+    
 end
 
 open Effect
@@ -61,16 +66,13 @@ let main () =
           state := i; 
           Printf.printf "set %d\n" !state;
           continue k ()
-      | effect eff, k ->
-          Printf.printf "unknown\n%!";
-          let _ = perform eff in
-          ()
+
   in 
-  Fibra.run run @@ fun () ->
-    (* perform (Fibra.Test ()); *)
+  let _ = Fibra.run @@ fun () -> run @@ fun () -> Fibra.runner @@ fun () ->
     Printf.printf "run\n%!";
-    let a = perform (Get ()) in
-    Printf.printf "%d\n%!" a;
-    perform (Fibra.Test ())
+    perform (Set 1);
+    perform (Fibra.Spawn (fun () -> (perform (Set 2))));
+    ()
+  in ()
 
 let _ = main ()
