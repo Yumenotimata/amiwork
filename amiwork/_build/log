@@ -13,28 +13,5 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_7ad9c5_output
-$ (cd _build/.sandbox/b77c009fc82a77516f910e57e2ca396f/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/main.pp.ml --impl bin/main.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
-$ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -intf-suffix .ml -no-alias-deps -opaque -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.pp.ml)
-> File "bin/main.ml", line 6, characters 2-13:
-> 6 |   open Effect
->       ^^^^^^^^^^^
-> Warning 33 [unused-open]: unused open Stdlib.Effect.
->
-> File "bin/main.ml", line 10, characters 4-42:
-> 10 |     | Run : (unit -> unit) -> int Effect.t
->          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: unused extension constructor Run
->
-> File "bin/main.ml", line 12, characters 4-46:
-> 12 |     | Runner : (unit -> unit) -> unit Effect.t
->          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: unused extension constructor Runner
->
-> File "bin/main.ml", line 52, characters 2-30:
-> 52 |   | Get : unit -> int Effect.t
->        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: extension constructor Get is never used to build values.
-> (However, this constructor appears in patterns.)
-$ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -o bin/main.exe /home/opam/.opam/5.3.0/lib/ocaml/unix/unix.cmxa /home/opam/.opam/5.3.0/lib/ocaml/threads/threads.cmxa /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime/ppx_deriving_runtime.cmxa bin/.main.eobjs/native/dune__exe__Main.cmx)
+$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_85fdde_output
 $ (cd /workspaces/amiwork/amiwork && /workspaces/amiwork/amiwork/_build/install/default/bin/amiwork)
