@@ -1,23 +1,43 @@
+
+
+
+
 module Fibra = struct
   open Effect
   open Effect.Deep
 
   type _ Effect.t +=
-    | Register : ((unit -> unit) -> unit) -> unit Effect.t
+    | Run : (unit -> unit) -> int Effect.t
+    | Test : unit -> unit Effect.t
 
-  let register f = perform (Register f)
-  
-  let run f =
-    let hs : ((unit -> unit) -> unit) list ref = ref [] in
-    try
-      f ()
-    with
-      | effect Register h, k -> 
-          hs := !hs @ [h];
-          continue k () 
-      | effect eff, k ->
-          List.iter (fun h -> h (fun () -> continue k (perform eff))) !hs;
-          ()
+  let run : ((unit -> unit) -> unit) -> (unit -> unit) -> unit = fun h f ->
+    let kqueue = ref [] in
+    let higher () = () in
+    let lower f =
+      Printf.printf "lower run f \n%!";
+      let a = perform (Run f) in
+      Printf.printf "back\n%!";
+      List.iter (fun f -> f ()) !kqueue;
+      ()
+    in
+
+    let handle_higher f k = 
+      try h (f); () with        
+        | effect Test _, k' ->
+            kqueue := !kqueue @ [fun () -> continue k' ()];
+            Printf.printf "test handled\n%!";
+            continue k 3
+        | effect eff, k' ->
+            Printf.printf "handle higher\n%!";
+            (* continue k (Obj.magic @@ perform eff) *)
+
+    in
+
+    try lower f; () with
+      | effect Run f, k ->
+          Printf.printf "cathed Run\n%!";
+          handle_higher f k;
+  ()
 end
 
 open Effect
@@ -29,7 +49,7 @@ type _ Effect.t +=
 
 let main () = 
   let state = ref 0 in
-  let run = fun f ->
+  let run f =
     try 
       f ();
       ()
@@ -41,11 +61,16 @@ let main () =
           state := i; 
           Printf.printf "set %d\n" !state;
           continue k ()
+      | effect eff, k ->
+          Printf.printf "unknown\n%!";
+          let _ = perform eff in
+          ()
   in 
-  Fibra.run @@ fun () ->
-    Fibra.register run;
-    perform (Set 3);
-    Printf.printf "%d\n" (perform (Get ()));
-    ()
+  Fibra.run run @@ fun () ->
+    (* perform (Fibra.Test ()); *)
+    Printf.printf "run\n%!";
+    let a = perform (Get ()) in
+    Printf.printf "%d\n%!" a;
+    perform (Fibra.Test ())
 
 let _ = main ()

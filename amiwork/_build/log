@@ -13,8 +13,38 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_23f605_output
-$ (cd _build/.sandbox/ec37dd71fb4af875f2bedf24a885488a/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/main.pp.ml --impl bin/main.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
+$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_5479c2_output
+$ (cd _build/.sandbox/061214642aa99a9acf09c8646a8ea25c/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/main.pp.ml --impl bin/main.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -intf-suffix .ml -no-alias-deps -opaque -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.pp.ml)
+> File "bin/main.ml", line 15, characters 8-14:
+> 15 |     let higher () = () in
+>              ^^^^^^
+> Warning 26 [unused-var]: unused variable higher.
+>
+> File "bin/main.ml", line 18, characters 10-11:
+> 18 |       let a = perform (Run f) in
+>                ^
+> Warning 26 [unused-var]: unused variable a.
+>
+> File "bin/main.ml", line 30, characters 17-20:
+> 30 |         | effect eff, k' ->
+>                       ^^^
+> Warning 27 [unused-var-strict]: unused variable eff.
+>
+> File "bin/main.ml", line 30, characters 22-24:
+> 30 |         | effect eff, k' ->
+>                            ^^
+> Warning 27 [unused-var-strict]: unused variable k'.
+>
+> File "bin/main.ml", line 48, characters 2-30:
+> 48 |   | Set : int -> unit Effect.t
+>        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> Warning 38 [unused-extension]: extension constructor Set is never used to build values.
+> (However, this constructor appears in patterns.)
+>
+> File "bin/main.ml", line 64, characters 20-21:
+> 64 |       | effect eff, k ->
+>                          ^
+> Warning 27 [unused-var-strict]: unused variable k.
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -o bin/main.exe /home/opam/.opam/5.3.0/lib/ocaml/unix/unix.cmxa /home/opam/.opam/5.3.0/lib/ocaml/threads/threads.cmxa /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime/ppx_deriving_runtime.cmxa bin/.main.eobjs/native/dune__exe__Main.cmx)
 $ (cd /workspaces/amiwork/amiwork && /workspaces/amiwork/amiwork/_build/install/default/bin/amiwork)
