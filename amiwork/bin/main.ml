@@ -6,6 +6,7 @@ open Effect.Deep
 type _ Effect.t +=
   | Get : unit -> int Effect.t
   | Set : int -> unit Effect.t
+  | AsyncGet : unit -> unit Fibra.promise Effect.t
 
 let main () = 
   let state = ref 0 in
@@ -21,14 +22,13 @@ let main () =
           state := i; 
           Printf.printf "set %d\n%!" !state;
           continue k ()
+      | effect AsyncGet i, k ->
+          let p = Fibra.async(fun () -> Printf.printf "async get\n%!") in
+          continue k p
 
   in
   let prog () = 
-    let state = perform @@ Get () in
-    let p = Fibra.spawn (fun () -> Fibra.spawn @@ fun () -> perform @@ Set 1) in
-    (* Fibra.await p; *)
-    let state = perform @@ Get () in
-    Printf.printf "state %d\n%!" state;
+    let _ = perform (AsyncGet ()) in
     ()
   in
   Fibra.run @@ fun () -> run @@ fun () -> Fibra.runner @@ fun () -> prog ()

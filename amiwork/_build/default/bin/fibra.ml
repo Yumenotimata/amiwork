@@ -44,20 +44,28 @@ module Fibra : Fibra = struct
       if not (Queue.is_empty kqueue) then
         let task = Queue.pop kqueue in
         try
+          Printf.printf "run tas\n%!";
           task ();
+          Printf.printf "end task\n%!";
+          if not (Queue.is_empty kqueue) then
+            Printf.printf "kqueu is not empty\n%!";
+          scheduler ();
         with
           | effect Async f, k ->
               Printf.printf "perform\n%!";
               let v = perform (Eff (fun () -> perform (Async f))) in
               Printf.printf "ta\n%!";
               begin match v with
-                | User v -> continue k v
-                | Runtime _ -> ();
+                | User v ->
+                    Printf.printf "user level\n%!";
+                    continue k v
+                | Runtime _ ->
+                    Printf.printf "runtime\n%!";
               end;
           | effect Await p, k ->
-              Printf.printf "perform\n%!";
+              Printf.printf "perfoffrm\n%!";
               let v = perform (Eff (fun () -> perform (Await p))) in
-              Printf.printf "ta\n%!";
+              Printf.printf "tafff\n%!";
               begin match v with
                 | User v -> continue k v
                 | Runtime _ -> ();
@@ -84,6 +92,19 @@ module Fibra : Fibra = struct
       Printf.printf "main run returne\n%!";
       ()
     with
+      | effect Async f, k ->
+          Printf.printf "async\n";
+          let p = ref (Waiting []) in
+          Queue.push (fun () -> ignore @@ run_promise p f) kqueue;
+                (* Queue.push (fun () -> continue k' p) kqueue; *)
+          continue k ((Obj.magic p));
+      | effect Await p, k ->
+          Printf.printf "await\n%!";
+            begin match !p with
+              | Done v -> continue k ((Obj.magic v))
+              | Waiting l -> p := Waiting (k::l)
+            end;
+          (* continue k (User (Obj.magic p)); *)
       | effect Eff eff, k ->
           try
             let v = eff () in ()
@@ -94,15 +115,15 @@ module Fibra : Fibra = struct
                 Printf.printf "async\n";
                 let p = ref (Waiting []) in
                 Queue.push (fun () -> ignore @@ run_promise p f) kqueue;
-                Queue.push (fun () -> continue k' p) kqueue;
-                continue k (Runtime ());
+                (* Queue.push (fun () -> continue k' p) kqueue; *)
+                continue k (User (Obj.magic p));
             | effect Await p, k' ->
                 Printf.printf "await\n%!";
                 begin match !p with
                   | Done v -> continue k (User (Obj.magic v))
                   | Waiting l -> p := Waiting (k'::l)
                 end;
-                continue k (Runtime ());
+                continue k (User (Obj.magic p));
     Printf.printf "Main.run returned\n%!";
     ()
 end
