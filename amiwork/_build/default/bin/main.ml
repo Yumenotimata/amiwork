@@ -250,44 +250,112 @@ module Router = struct
     ip;
   }
 
-  let run self handler = Fibra.async @@ fun () ->
+  let run self prog handler = Fibra.async @@ fun () ->
     let rec loop () =
-      
       ()
+      (* try prog () with
+        | effect Recv _, k -> () *)
     in handler loop
 end
 
 module Machine = struct 
   type machine = {
-    eth : Datalink.
+    eth : Datalink.Ethernet.ethernet;
+    ip : ip_addr;
   }
 
+  open Effect
+  open Effect.Deep
+
+  type _ Effect.t +=
+    Recv : unit -> unit Effect.t
+
+  let create ip mac = {
+    eth = Datalink.Ethernet.create (Phy.Nic.create mac);
+    ip;
+  }
+
+  let run self prog handler = Fibra.async @@ fun () ->
+    let self_handler f =
+      let rec loop () =
+        try f () with
+          | effect Recv _, k -> 
+              Printf.printf "machien received handler\n%!";
+              let rx = Datalink.Ethernet.recv self.eth in
+              continue k ()
+          in handler loop
+    in self_handler (fun () -> prog self_handler)
+end
+
+module SocketLib = struct
+  open Effect
+  open Effect.Deep
+
+  type 'a future =
+    | Waiting of unit
+    | Done of unit
+
+  type socketlib = unit
+  type port = int
+  type fd = int
+  type socket = {
+    fd : fd;
+  }
+
+  type _ Effect.t +=
+    | Bind : socket * port -> unit Effect.t
+    | Listen : socket -> unit Effect.t
+    | Accept : socket -> unit future Effect.t
+
+  let socket () = {
+    fd = 0;
+  }
+  let bind self port = perform (Bind (self, port))
+  let listen self = perform (Listen self)
+  let accept self = perform (Accept self)
+  (* let  *)
   
+  let kqueue = Queue.create ()
+  let run prog eff_handler = 
+    
+    let q = ref [] in
+    let rec handler = 
+      try
+        prog ()
+      with
+        | effect Bind (self, port), k ->
+            if List.exists (fun (_, p) -> port == p) !q then
+              q := !q @ [(self, port)];
+            continue k ()
+        | effect Listen self, k -> continue k ()
+        | effect Accept self, k ->
+            continue k (Done ())
+    in
+    Fibra.async @@ fun () -> handler;
+    Fibra.async @@ fun () ->
+      eff_handler @@ fun () ->
+      let rx = perform (Machine.Recv ()) in
+      Printf.printf "returned\n%!";
+      ()
 end
 
 let main () = Fibra.await @@ Fibra.async @@ fun () -> Meta.run @@ fun handler -> 
-  let repeater0 = Repeater.create "00:00" in 
-  let eth0 = Datalink.Ethernet.create (Phy.Nic.create "00:01") in
-  let eth1 = Datalink.Ethernet.create (Phy.Nic.create "00:02") in
-  let eth2 = Datalink.Ethernet.create (Phy.Nic.create "00:03") in
-  Meta.connect eth0.nic.uid repeater0.nic.uid;
-  Meta.connect repeater0.nic.uid eth1.nic.uid;
-  Meta.connect repeater0.nic.uid eth2.nic.uid;
-  let _ = Repeater.run repeater0 handler in
-  let _ = Fibra.async @@ fun () ->
-    handler @@ fun () ->
-      let res = Datalink.Ethernet.recv eth1 in
-      Printf.printf "eth1 received\n%!";
+  let machine0 = Machine.create "0.0.0.0" "00:00:00" in
+  let lib machine_handler =
+    let prog () = 
+      let socket = SocketLib.socket () in
+      let _ = SocketLib.bind socket 0 in
+      let fd = SocketLib.accept socket in
+      Printf.printf "received \n%!";
+      ()
+    in 
+    let _ = SocketLib.run prog machine_handler in ()
   in
-  let _ = Fibra.async @@ fun () ->
-    handler @@ fun () ->
-      let res = Datalink.Ethernet.recv eth2 in
-      Printf.printf "eth2 received\n%!";
-  in
-  let _ = Fibra.async @@ fun () ->
-    handler @@ fun () ->
-      Datalink.Ethernet.send eth0 (ip_packet_default ()) "00:00";
-  in ()
+  let _ = Machine.run machine0 lib handler in
+  let nic0 = Phy.Nic.create "00:00:01" in
+  Meta.connect machine0.eth.nic.uid nic0.uid;
+  Phy.Nic.send nic0 (ethernet_frame_default ());
+  ()
 
 let _ = 
   let devices = Fibra.run main in
