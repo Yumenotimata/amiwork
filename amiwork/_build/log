@@ -13,87 +13,14 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_4fcd87_output
-$ (cd _build/.sandbox/6f2d527bdbb93ce370a21af184dfe208/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/fibra.pp.ml --impl bin/fibra.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
+$ /home/opam/.opam/5.3.0/bin/ocamlc.opt -config > /tmp/dune_f9fa4f_output
+$ (cd _build/.sandbox/d691937d2cce4cf85fbdb2b9fb3c582d/default && .ppx/52c49c7c6bc3dda051f54733e606b527/ppx.exe -o bin/fibra.pp.ml --impl bin/fibra.ml -corrected-suffix .ppx-corrected -diff-cmd - -dump-ast)
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamldep.opt -modules -impl bin/fibra.pp.ml) > _build/default/bin/.main.eobjs/dune__exe__Fibra.impl.d
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlc.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -bin-annot -bin-annot-occurrences -I bin/.main.eobjs/byte -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -no-alias-deps -opaque -open Dune__exe -o bin/.main.eobjs/byte/dune__exe__Fibra.cmo -c -impl bin/fibra.pp.ml)
-> File "bin/fibra.ml", line 79, characters 10-21:
-> 79 |   let rec run_promise : 'a promise -> (unit -> 'a) -> unit = fun pr f ->
->                ^^^^^^^^^^^
-> Warning 39 [unused-rec-flag]: unused rec flag.
->
-> File "bin/fibra.ml", line 30, characters 4-46:
-> 30 |     | Runner : (unit -> unit) -> unit Effect.t
->          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: extension constructor Runner is never used to build values.
-> (However, this constructor appears in patterns.)
->
-> File "bin/fibra.ml", line 110, characters 16-17:
-> 110 |             let v = eff () in ()
->                       ^
-> Warning 26 [unused-var]: unused variable v.
->
-> File "bin/fibra.ml", line 112, characters 28-29:
-> 112 |             | effect Runner f, k' -> 
->                                   ^
-> Warning 27 [unused-var-strict]: unused variable f.
->
-> File "bin/fibra.ml", line 112, characters 31-33:
-> 112 |             | effect Runner f, k' -> 
->                                      ^^
-> Warning 27 [unused-var-strict]: unused variable k'.
->
-> File "bin/fibra.ml", line 114, characters 30-32:
-> 114 |             | effect Async f, k' ->
->                                     ^^
-> Warning 27 [unused-var-strict]: unused variable k'.
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -intf-suffix .ml -no-alias-deps -opaque -open Dune__exe -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.pp.ml)
-> File "bin/main.ml", line 7, characters 2-30:
-> 7 |   | Get : unit -> int Effect.t
->       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: extension constructor Get is never used to build values.
-> (However, this constructor appears in patterns.)
->
-> File "bin/main.ml", line 8, characters 2-30:
-> 8 |   | Set : int -> unit Effect.t
->       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: extension constructor Set is never used to build values.
-> (However, this constructor appears in patterns.)
->
-> File "bin/main.ml", line 25, characters 24-25:
-> 25 |       | effect AsyncGet i, k ->
->                              ^
-> Warning 27 [unused-var-strict]: unused variable i.
+> File "bin/main.ml", line 35, characters 42-54:
+> 35 |   Fibra.run @@ fun () -> run @@ fun () -> Fibra.runner @@ fun () -> prog ()
+>                                                ^^^^^^^^^^^^
+> Error: Unbound value Fibra.runner
+[2]
 $ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/opam/.opam/5.3.0/lib/ocaml/threads -I /home/opam/.opam/5.3.0/lib/ocaml/unix -I /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime -intf-suffix .ml -no-alias-deps -opaque -open Dune__exe -o bin/.main.eobjs/native/dune__exe__Fibra.cmx -c -impl bin/fibra.pp.ml)
-> File "bin/fibra.ml", line 79, characters 10-21:
-> 79 |   let rec run_promise : 'a promise -> (unit -> 'a) -> unit = fun pr f ->
->                ^^^^^^^^^^^
-> Warning 39 [unused-rec-flag]: unused rec flag.
->
-> File "bin/fibra.ml", line 30, characters 4-46:
-> 30 |     | Runner : (unit -> unit) -> unit Effect.t
->          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> Warning 38 [unused-extension]: extension constructor Runner is never used to build values.
-> (However, this constructor appears in patterns.)
->
-> File "bin/fibra.ml", line 110, characters 16-17:
-> 110 |             let v = eff () in ()
->                       ^
-> Warning 26 [unused-var]: unused variable v.
->
-> File "bin/fibra.ml", line 112, characters 28-29:
-> 112 |             | effect Runner f, k' -> 
->                                   ^
-> Warning 27 [unused-var-strict]: unused variable f.
->
-> File "bin/fibra.ml", line 112, characters 31-33:
-> 112 |             | effect Runner f, k' -> 
->                                      ^^
-> Warning 27 [unused-var-strict]: unused variable k'.
->
-> File "bin/fibra.ml", line 114, characters 30-32:
-> 114 |             | effect Async f, k' ->
->                                     ^^
-> Warning 27 [unused-var-strict]: unused variable k'.
-$ (cd _build/default && /home/opam/.opam/5.3.0/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -warn-error -a -g -o bin/main.exe /home/opam/.opam/5.3.0/lib/ocaml/unix/unix.cmxa /home/opam/.opam/5.3.0/lib/ocaml/threads/threads.cmxa /home/opam/.opam/5.3.0/lib/ppx_deriving/runtime/ppx_deriving_runtime.cmxa bin/.main.eobjs/native/dune__exe.cmx bin/.main.eobjs/native/dune__exe__Fibra.cmx bin/.main.eobjs/native/dune__exe__Main.cmx)
-$ (cd /workspaces/amiwork/amiwork && /workspaces/amiwork/amiwork/_build/install/default/bin/amiwork)

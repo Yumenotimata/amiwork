@@ -28,8 +28,9 @@ let main () =
 
   in
   let prog () = 
-    let _ = perform (AsyncGet ()) in
-    ()
+    let p2 = Fibra.async @@ fun () ->
+      0
+    in Printf.printf "%d\n%!" (Fibra.await p2)
   in
   Fibra.run @@ fun () -> run @@ fun () -> Fibra.runner @@ fun () -> prog ()
 

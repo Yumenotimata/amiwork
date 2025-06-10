@@ -1,129 +1,114 @@
 module type Fibra = sig
   type 'a promise
-  type 'a level
-  val async : (unit -> unit) -> unit promise
+  val async : (unit -> 'a) -> 'a promise
   val await : 'a promise -> 'a
-  val spawn : (unit -> unit) -> unit
-  val wake : (('a -> unit) -> unit) -> 'a
-  val run : (unit -> unit) -> unit
-  val runner : (unit -> unit) -> unit
+  val wake_by : ((unit -> unit) -> unit) -> unit
+  val wake_by_val : (('a -> unit) -> unit) -> 'a
+  val run : (unit -> 'a) -> 'a
+  val exit : 'a -> 'a
 end
 
 module Fibra : Fibra = struct
   open Effect
   open Effect.Deep
 
-  type 'a _promise = 
+  type 'a _promise =
     | Waiting of ('a, unit) continuation list
     | Done of 'a
 
   type 'a promise = 'a _promise ref
 
-  type 'a level =
-    | Runtime of unit
-    | User of 'a
-
   type _ Effect.t +=
-    | Async : (unit -> unit) -> unit promise Effect.t
+    | Async : (unit -> 'a) -> 'a promise Effect.t
     | Await : 'a promise -> 'a Effect.t
-    | Wake : (('a -> unit) -> unit) -> 'a Effect.t
-    | Runner : (unit -> unit) -> unit Effect.t
-    | Eff : (unit -> 'a) -> 'a level Effect.t
-  
+    | Wake : ((unit -> unit) -> unit) -> unit Effect.t
+    | WakeVal : (('a -> unit) -> unit) -> 'a Effect.t
+    | Exit : 'a -> unit Effect.t
+
   let async f = perform (Async f)
   let await p = perform (Await p)
-  let spawn f = ignore (async f)
-  let wake f = perform (Wake f)
+  let wake_by f = perform (Wake f)
+  let wake_by_val f = perform (WakeVal f)
+  let exit v = perform (Exit v); v
 
-  let kqueue = Queue.create ()
+  let q = Queue.create ()
+  let m = Mutex.create ()
 
-  let runner f = 
-    (* let _ = perform (Runner f) in *)
-    Queue.push f kqueue;
-    let rec scheduler () =
-      if not (Queue.is_empty kqueue) then
-        let task = Queue.pop kqueue in
-        try
-          Printf.printf "run tas\n%!";
-          task ();
-          Printf.printf "end task\n%!";
-          if not (Queue.is_empty kqueue) then
-            Printf.printf "kqueu is not empty\n%!";
-          scheduler ();
-        with
-          | effect Async f, k ->
-              Printf.printf "perform\n%!";
-              let v = perform (Eff (fun () -> perform (Async f))) in
-              Printf.printf "ta\n%!";
-              begin match v with
-                | User v ->
-                    Printf.printf "user level\n%!";
-                    continue k v
-                | Runtime _ ->
-                    Printf.printf "runtime\n%!";
-              end;
-          | effect Await p, k ->
-              Printf.printf "perfoffrm\n%!";
-              let v = perform (Eff (fun () -> perform (Await p))) in
-              Printf.printf "tafff\n%!";
-              begin match v with
-                | User v -> continue k v
-                | Runtime _ -> ();
-              end;
-        Printf.printf "next\n%!";
-        scheduler ()
+  let enqueue a = 
+    Mutex.lock m;
+    Queue.push a q;
+    Mutex.unlock m
+  
+  let dequeue () =
+    Mutex.lock m;
+    let a = 
+      if Queue.is_empty q then 
+        None 
+      else 
+        Some (Queue.pop q)
     in
-    scheduler ();
-    Printf.printf "runnerf\n%!"
+    Mutex.unlock m;
+    a
 
-  let rec run_promise : 'a promise -> (unit -> 'a) -> unit = fun pr f ->
-    Printf.printf "run promise\n%!";
-    let v = f () in
-    match !pr with
-      | Done _ -> failwith "already done"
-      | Waiting ks ->
-          pr := Done v;
-          let schedule k = Queue.push (fun () -> continue k ()) kqueue in
-          List.iter schedule ks
+  let n_wakers = ref 0
 
-  let run f = 
+  let run main =
     try 
-      ignore @@ f ();
-      Printf.printf "main run returne\n%!";
-      ()
-    with
-      | effect Async f, k ->
-          Printf.printf "async\n";
-          let p = ref (Waiting []) in
-          Queue.push (fun () -> ignore @@ run_promise p f) kqueue;
-                (* Queue.push (fun () -> continue k' p) kqueue; *)
-          continue k ((Obj.magic p));
-      | effect Await p, k ->
-          Printf.printf "await\n%!";
-            begin match !p with
-              | Done v -> continue k ((Obj.magic v))
-              | Waiting l -> p := Waiting (k::l)
-            end;
-          (* continue k (User (Obj.magic p)); *)
-      | effect Eff eff, k ->
-          try
-            let v = eff () in ()
+      let rec run_fibra : 'a. 'a promise -> (unit -> 'a) -> unit =
+        fun pr f ->
+          try 
+            let v = f () in
+            match !pr with
+              | Done _ -> failwith "already done"
+              | Waiting ks ->
+                  pr := Done v;
+                  let schedule k = enqueue (fun () -> continue k v) in
+                  List.iter schedule ks;
           with
-            | effect Runner f, k' -> 
-                continue k (Runtime ());
-            | effect Async f, k' ->
-                Printf.printf "async\n";
+            | effect (Async f), k ->
                 let p = ref (Waiting []) in
-                Queue.push (fun () -> ignore @@ run_promise p f) kqueue;
-                (* Queue.push (fun () -> continue k' p) kqueue; *)
-                continue k (User (Obj.magic p));
-            | effect Await p, k' ->
-                Printf.printf "await\n%!";
+                enqueue (fun () -> run_fibra p f);
+                enqueue (fun () -> continue k p)
+            | effect (Await p), k ->
                 begin match !p with
-                  | Done v -> continue k (User (Obj.magic v))
-                  | Waiting l -> p := Waiting (k'::l)
-                end;
-                continue k (User (Obj.magic p));
-    Printf.printf "Main.run returned\n%!";
-    ()
+                  | Done v -> enqueue (fun () -> continue k v)
+                  | Waiting l -> p := Waiting (k::l)
+                end
+            | effect (Wake f), k ->
+                n_wakers := !n_wakers + 1;
+                let called = ref false in
+                let waker () =
+                  if not !called then
+                    enqueue @@ fun () ->
+                      n_wakers := !n_wakers - 1;
+                      continue k ()
+                in
+                f waker
+            | effect (WakeVal f), k ->
+                n_wakers := !n_wakers + 1;
+                let called = ref false in
+                let waker v =
+                  if not !called then
+                    enqueue @@ fun () -> 
+                      n_wakers := !n_wakers - 1;
+                      continue k v;
+                    called := true
+                in
+                f waker
+
+      in
+      let latest : 'a option ref = ref None in
+      let rec scheduler () =
+        match dequeue () with
+          | Some f -> latest := Some (f ()); scheduler ()
+          | None -> if !n_wakers > 0 then 
+              scheduler () 
+          else match !latest with 
+            | Some v -> Obj.magic v 
+            | None -> failwith ""
+      in
+      enqueue (fun () -> run_fibra (ref (Waiting [])) main);
+      scheduler ()
+    with
+      | effect Exit v, _ -> Obj.magic v
 end
