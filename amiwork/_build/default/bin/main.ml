@@ -1,5 +1,42 @@
 open Fibra
 
+type tcp_segment = {
+  data : bytes;
+} [@@deriving show]
+
+type ip_addr = string [@@deriving show]
+
+type ip_packet = {
+  src : ip_addr;
+  dst : ip_addr;
+  payload : tcp_segment;
+} [@@deriving show]
+
+type mac = string [@@deriving show]
+
+(* 本来はDatalinkで定義したいが、frameからbytesのシリアライザを書くのは面倒なためいったんframeをストリームに直接流す *)
+type ethernet_frame = {
+  src : mac;
+  dst : mac;
+  payload : ip_packet;
+} [@@deriving show]
+
+let tcp_segment_default () = {
+  data = Bytes.empty;
+} [@@deriving show]
+
+let ip_packet_default : unit -> ip_packet = fun () -> {
+  src = "";
+  dst = "";
+  payload = tcp_segment_default ();
+} [@@deriving show]
+
+let ethernet_frame_default () = {
+  src = "";
+  dst = "";
+  payload = ip_packet_default ();
+} [@@deriving show]
+
 module type Meta = sig
   type uid
   type route
@@ -22,14 +59,14 @@ module Meta = struct
   }
   type device = {
     uid : uid;
-    rx : bytes list;
+    rx : ethernet_frame list;
   } [@@deriving show]
   
   type _ Effect.t +=
     | Create : uid Effect.t
     | Connect : uid * uid -> unit Effect.t
-    | Send : uid * bytes list -> unit Effect.t
-    | Recv : uid -> (bytes list Fibra.promise) Effect.t
+    | Send : uid * ethernet_frame -> unit Effect.t
+    | Recv : uid -> (ethernet_frame list Fibra.promise) Effect.t
 
   let counter = ref 0
   let issue () = 
@@ -37,13 +74,13 @@ module Meta = struct
     counter := !counter + 1;
     uid
 
-  let connect p1 p2 = perform (Connect (p1, p2))
+  let connect src dst = perform (Connect (src, dst))
   let run f =
     let devices : device list ref = ref [] in
     let q = ref [] in
     let rtb : route list ref = ref [] in 
     let handler m = ref (try m (); with 
-      | effect Connect (p1 , p2), k -> 
+      | effect Connect (p1, p2), k -> 
         if p1 != p2 then
           rtb := !rtb @ [{ p1; p2 }];
         continue k ()
@@ -56,22 +93,23 @@ module Meta = struct
             List.filter_map (fun (rt : route) -> 
               if rt.p1 == src then 
                 Some rt.p2
-              else if rt.p2 == src then 
-                Some rt.p1 
+              else if rt.p2 == src then
+                Some rt.p1
               else
                 None
             ) !rtb
           in 
           devices := List.map (fun dev -> 
             if List.exists (fun p -> p == dev.uid) targets then 
-              { dev with rx = dev.rx @ payload} 
+              { dev with rx = dev.rx @ [payload]} 
             else 
               dev
           ) !devices;
           List.iter (fun (uid, waker) -> (
               List.iter (fun target -> (
                 if uid == target then
-                  waker payload
+                  (* すでに受信済みのものも返すべき。あとはバッファを殻にすべき *)
+                  waker [payload]
               )) targets
           )) !q;
           continue k ()
@@ -93,9 +131,9 @@ end
 
 module type Nic = sig
   type nic
-  val create : unit -> nic
-  val send : nic -> bytes list -> unit
-  val recv : nic -> bytes list
+  val create : mac -> nic
+  val send : nic -> ethernet_frame -> unit
+  val recv : nic -> ethernet_frame
 end
 
 module type Phy = sig
@@ -111,8 +149,9 @@ module Phy = struct
   module Nic = struct
     type nic = {
       uid : Meta.uid;
+      mac : mac;
     }
-    let create () = { uid = perform Create }
+    let create mac = { uid = perform Create; mac }
     let send self payload = perform (Send (self.uid, payload))
     let recv self = Fibra.await (perform (Recv self.uid))
   end
@@ -124,8 +163,8 @@ end
 module type Ethernet = sig
   type ethernet
   val create : unit -> ethernet
-  val send : ethernet -> bytes list -> unit
-  val recv : ethernet -> bytes list
+  val send : ethernet -> ethernet_frame -> mac -> unit
+  val recv : ethernet -> ethernet_frame
 end
 
 module type Datalink = sig
@@ -137,18 +176,22 @@ module Datalink = struct
     type ethernet = {
       nic : Phy.Nic.nic;
     }
-    let create () = { nic = Phy.Nic.create () }
-    let send self payload = Phy.Nic.send self.nic payload
+    let create nic = { nic }
+    let send self payload dst =
+      let payload' = {
+        src = self.nic.mac;
+        dst = dst;
+        payload;
+      } in
+      Phy.Nic.send self.nic payload'
     let recv self = Phy.Nic.recv self.nic
   end
 end
-
+(* 
 module type Ip = sig
-  type addr
-  type header
   type ip
-  val create : unit -> ip
-  val send : ip -> bytes list -> addr -> unit
+  val create : Phy.Nic.nic -> ip_addr -> ip
+  val send : ip_addr -> ip_packet -> ip_addr -> unit
 end
 
 module type Network = sig
@@ -156,49 +199,96 @@ module type Network = sig
   val run : (unit -> unit) -> unit
 end
 
-module Network : Network = struct
+module Network = struct
   open Effect
   open Effect.Deep
 
-  type _ Effect.t +=
-    | Send : (bytes list) * string -> unit Effect.t
-
-  module Ip : Ip = struct
-    type addr = string
-    type header = {
-      src : addr;
-      dst : addr;
-      payload : bytes list;
-    }
+  module Ip = struct
     type ip = {
       eth : Datalink.Ethernet.ethernet
     }
-    let create () = { eth = Datalink.Ethernet.create () }
-    let send self payload dst = Datalink.Ethernet.send self.eth payload
+    let create nic = { eth = Datalink.Ethernet.create nic }
+    let send self payload dst =
+      (* Datalink.Ethernet.send self.eth payload *)
+      Datalink.Ethernet.send self.eth (ip_packet_default ()) dst
     let recv self = Datalink.Ethernet.recv self.eth
   end
+end *)
 
-  let run f = 
-    try f () with
-      | effect Send (payload, dst), k -> ()
-      | e -> raise e
+module type Repeater = sig
+  type repeater
+  val create : mac -> repeater
+end
+
+module Repeater = struct 
+  type repeater = {
+    nic : Phy.Nic.nic
+  }
+
+  let create mac = {
+    nic = Phy.Nic.create mac
+  }
+
+  let run self handler = Fibra.async @@ fun () -> 
+    let rec loop () =
+      Printf.printf "loop\n%!";
+      let frame = Phy.Nic.recv self.nic in
+      Printf.printf "Repeater: %s\n%!" (String.concat "," (List.map show_ethernet_frame frame));
+      List.iter (fun fr -> Phy.Nic.send self.nic fr) frame;
+      ()
+    in handler loop
+end
+
+module Router = struct
+  type router = {
+    nic : Phy.Nic.nic;
+    ip : ip_addr;
+  }
+
+  let create ip mac = {
+    nic = Phy.Nic.create mac;
+    ip;
+  }
+
+  let run self handler = Fibra.async @@ fun () ->
+    let rec loop () =
+      
+      ()
+    in handler loop
+end
+
+module Machine = struct 
+  type machine = {
+    eth : Datalink.
+  }
+
+  
 end
 
 let main () = Fibra.await @@ Fibra.async @@ fun () -> Meta.run @@ fun handler -> 
-  let eth0 = Datalink.Ethernet.create () in
-  let eth1 = Datalink.Ethernet.create () in
-  Meta.connect eth0.nic.uid eth1.nic.uid;
+  let repeater0 = Repeater.create "00:00" in 
+  let eth0 = Datalink.Ethernet.create (Phy.Nic.create "00:01") in
+  let eth1 = Datalink.Ethernet.create (Phy.Nic.create "00:02") in
+  let eth2 = Datalink.Ethernet.create (Phy.Nic.create "00:03") in
+  Meta.connect eth0.nic.uid repeater0.nic.uid;
+  Meta.connect repeater0.nic.uid eth1.nic.uid;
+  Meta.connect repeater0.nic.uid eth2.nic.uid;
+  let _ = Repeater.run repeater0 handler in
   let _ = Fibra.async @@ fun () ->
     handler @@ fun () ->
-      let rx = Datalink.Ethernet.recv eth0 in
-      Printf.printf "%s\n%!" (Bytes.to_string (Bytes.concat Bytes.empty rx));
-      (* Fibra.exit [] *)
+      let res = Datalink.Ethernet.recv eth1 in
+      Printf.printf "eth1 received\n%!";
   in
   let _ = Fibra.async @@ fun () ->
-    handler @@ fun () -> 
-      Datalink.Ethernet.send eth1 [Bytes.make 5 'h'];
-      (* [] *)
+    handler @@ fun () ->
+      let res = Datalink.Ethernet.recv eth2 in
+      Printf.printf "eth2 received\n%!";
+  in
+  let _ = Fibra.async @@ fun () ->
+    handler @@ fun () ->
+      Datalink.Ethernet.send eth0 (ip_packet_default ()) "00:00";
   in ()
+
 let _ = 
   let devices = Fibra.run main in
-  List.iter (fun (dev : Meta.device) -> Printf.printf "%s\n%!" (Meta.show_device dev)) devices;
+  List.iter (fun (dev : Meta.device) -> Printf.printf "%s\n%!" ("Device: " ^ (Meta.show_device dev))) devices;

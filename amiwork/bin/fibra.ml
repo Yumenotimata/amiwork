@@ -97,6 +97,7 @@ module Fibra : Fibra = struct
                 f waker
 
       in
+      (* Obj.magicではなくExitの値をoptionで返すべき *)
       let latest : 'a option ref = ref None in
       let rec scheduler () =
         match dequeue () with

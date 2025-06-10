@@ -1,5 +1,4 @@
 (lang dune 3.19)
-
 (name amiwork)
 
 (generate_opam_files true)
